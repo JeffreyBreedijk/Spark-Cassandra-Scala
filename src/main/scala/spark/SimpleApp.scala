@@ -1,47 +1,43 @@
 package spark
 
 import com.datastax.spark.connector._
-
 import org.apache.spark.rdd.RDD
+
 import org.apache.spark.{SparkConf, SparkContext}
+import org.joda.time.DateTime
 
+object SimpleApp {
 
+  case class Consolidation(ke: String, va: String, start: String, end: String, sum: Double, min: Double, max: Double, co: Int)
 
-object SimpleApp extends App{
-
-    case class Consolidation(tagkey:String, tagvalue:String, start:Long, end:Long, sum: Double, min: Double, max: Double, count: Int)
-
-    val start = org.joda.time.DateTime.parse("2016-04-01T00:00:00+02:00")
-    val end = org.joda.time.DateTime.parse("2016-05-01T00:00:00+02:00")
+  def main (args: Array[String]) {
 
     val conf = new SparkConf(true).set("spark.cassandra.connection.host", "localhost")
 
     val sc = new SparkContext(conf)
 
-    val measurements = sc.cassandraTable("tsap","daily").where("date > ?", start).where("date <= ?", end)
-      .map(r => (r.getString("source"), (r.getDouble("sum"), r.getDouble("min"), r.getDouble("max"), r.getInt("count")))).cache()
+    val start = sc.broadcast(org.joda.time.DateTime.parse("2016-04-01T00:00:00+02:00"))
+    val end = sc.broadcast(org.joda.time.DateTime.parse("2016-05-01T00:00:00+02:00"))
 
-    val tagcsv = sc.textFile("/Users/JeffreyBreedijk/Downloads/spark-tags").map(line => line.split(",").toList.map(_.trim)).map(b => (b.head, (b(1), b(2))))
+    val measurements = sc.cassandraTable("tsap", "daily")
+      .where("date > ?", start.value).where("date <= ?", end.value)
+      .map(r => (r.getString("source"), (r.getDouble("sum"), r.getDouble("min"), r.getDouble("max"), r.getInt("count"))))
       .cache()
 
-    val uniqueTags = tagcsv.map(t => ((t._2._1, t._2._2), 1)).reduceByKey(_ + _).cache()
+    val t = sc.textFile("/Users/JeffreyBreedijk/Downloads/spark-tags").map(line => line.split(",").toList.map(_.trim))
+      .map(b => (b.head, (b(1), b(2))))
+      .filter(t => t._2._1 == "province" && t._2._2 == "Utrecht")
+      .cache()
 
-    val provinces = uniqueTags.filter(t => t._1._1 == "province").cache()
-
-    val xs = provinces.map(p => aggregate(filterTag(p._1._1, p._1._2)))
-
-    xs.collect().foreach(a => println())
-
-
-
-  private def filterTag(tagName:String, tagValue:String): RDD[(String, (String, String))] = {
-    tagcsv.filter(t => t._2._1 == tagName && t._2._2 == tagValue)
   }
 
-  private def aggregate(tags:RDD[(String, (String, String))]): RDD[((String, String), (Double, Double, Double, Int))] = {
+
+  private def aggregate(measurements:RDD[(String, (Double, Double, Double, Int))],
+                        tags:RDD[(String, (String, String))],
+                        start:DateTime,
+                        end:DateTime) = {
     measurements
-      .join(tags)
-      .map(x => ((x._2._2._1, x._2._2._2), (x._2._1._1, x._2._1._2, x._2._1._3, x._2._1._4)))
+      .join(tags).map(x => ((x._2._2._1, x._2._2._2), (x._2._1._1, x._2._1._2, x._2._1._3, x._2._1._4)))
       .combineByKey(
         measure => measure,
         (daily1: (Double, Double, Double, Int), daily2: (Double, Double, Double, Int)) => (
@@ -54,8 +50,8 @@ object SimpleApp extends App{
           if (daily1._2 < daily2._2) daily1._2 else daily2._2,
           if (daily1._3 > daily2._3) daily1._3 else daily2._3,
           daily1._4 + daily2._4))
-      //.map(x => new Consolidation(x._1._1, x._1._2, start.getMillis, end.getMillis, x._2._1, x._2._2, x._2._3, x._2._4))
-
+      .map(x => new Consolidation(x._1._1, x._1._2, start.toString, end.toString, x._2._1, x._2._2, x._2._3, x._2._4))
+      .saveToCassandra("tsap", "cons")
 
   }
 

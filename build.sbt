@@ -4,7 +4,7 @@ name := "Cassandra Spark Scala"
 
 version := "0.1"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.10.6"
 
 libraryDependencies ++= Seq(
   "org.apache.spark" % "spark-core_2.10" % "1.4.0" % "provided",
