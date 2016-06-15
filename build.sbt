@@ -6,9 +6,12 @@ version := "0.1"
 
 scalaVersion := "2.10.6"
 
+resolvers += "Job Server Bintray" at "https://dl.bintray.com/spark-jobserver/maven"
+
 libraryDependencies ++= Seq(
   "org.apache.spark" % "spark-core_2.10" % "1.4.0" % "provided",
   "com.datastax.spark" % "spark-cassandra-connector_2.10" % "1.4.0"
+
 )
 
 assemblySettings
