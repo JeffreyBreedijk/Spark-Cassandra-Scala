@@ -1,11 +1,9 @@
-package spark
+package spark.to.alluxio
 
 import com.datastax.spark.connector._
 import org.apache.spark.{SparkConf, SparkContext}
 
-object AggregateMonthAllux {
-
-  case class Consolidation(key:String, value: String, channel:String, start: String, end: String, sum: Double, min: Double, max: Double, counter: Int)
+object AggregateMonth {
 
   def main(args: Array[String]) {
 
@@ -66,7 +64,7 @@ object AggregateMonthAllux {
           if (daily1._3 > daily2._3) daily1._3 else daily2._3,
           daily1._4 + daily2._4))
       .map(a => (a._1._1, a._1._2, a._2._1, a._2._2, a._2._3, a._2._4))
-      .saveAsTextFile("alluxio://localhost:19998/consolidation")
+      .saveAsTextFile("alluxio://localhost:19998/consolidation/month/" + end.value)
 
 
   }

@@ -1,4 +1,4 @@
-package spark
+package spark.to.cassandra
 
 import com.datastax.spark.connector._
 import org.apache.spark.{SparkConf, SparkContext}
@@ -39,7 +39,7 @@ object AggregateMonth {
 
     // tags as  <(channelKey, channelType), (tagKey, tagValue)>
     // ex:      <(12345, GDT), (zipCode, 3452)>
-    val tagcsv = sc.textFile("alluxio://localhost:19998/tags4")
+    val tagcsv = sc.textFile("alluxio://localhost:19998/tags")
       .map(t => t.replace("(", ""))
       .map(t => t.replace(")", ""))
       .map(line => line.split(",").toList.map(_.trim))
