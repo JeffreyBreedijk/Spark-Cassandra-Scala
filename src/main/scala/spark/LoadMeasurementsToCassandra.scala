@@ -6,7 +6,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.joda.time.DateTime
 
 
-object LoadCsvToCassandra extends App {
+object LoadMeasurementsToCassandra extends App {
 
   case class Daily(source: String, channel: String, date:String, sum: Double, max: Double, min: Double, count:Int)
 
